@@ -26,7 +26,7 @@ Thumbs.db
 *.swo
 
 # Prisma
-prisma/migrations/
+# Note: migrations folder should be committed for deployment
 
 # Railway
 .railway/
