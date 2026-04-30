@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
@@ -10,6 +12,7 @@ import dashboardRoutes from './routes/dashboard.js';
 
 dotenv.config();
 
+const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -51,6 +54,29 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// Run migrations on startup in production
+async function runMigrations() {
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      console.log('🔄 Running database migrations...');
+      const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+      console.log('✅ Migrations completed successfully');
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
+    } catch (error) {
+      console.error('❌ Migration failed:', error.message);
+      // Don't exit - let the server start anyway
+    }
+  }
+}
+
+// Start server
+async function startServer() {
+  await runMigrations();
+  
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
+
+startServer();
