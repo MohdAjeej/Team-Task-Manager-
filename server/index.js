@@ -26,6 +26,21 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Root route
+app.get('/', (_req, res) => {
+  res.json({ 
+    message: 'Team Task Manager API 🚀',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      projects: '/api/projects',
+      tasks: '/api/tasks',
+      dashboard: '/api/dashboard'
+    }
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
