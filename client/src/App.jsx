@@ -5,6 +5,8 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import MyTasks from './pages/MyTasks';
+import Team from './pages/Team';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -12,8 +14,8 @@ function PrivateRoute({ children }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Loading…</div>
       </div>
     );
   }
@@ -26,8 +28,8 @@ function PublicRoute({ children }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Loading…</div>
       </div>
     );
   }
@@ -48,6 +50,8 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:projectId" element={<ProjectDetail />} />
+            <Route path="my-tasks" element={<MyTasks />} />
+            <Route path="team" element={<Team />} />
           </Route>
         </Routes>
       </AuthProvider>

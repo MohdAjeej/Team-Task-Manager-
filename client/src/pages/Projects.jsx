@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, FolderKanban, Users, CheckCircle2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -26,6 +27,7 @@ export default function Projects() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await axios.post('/api/projects', formData);
       setShowModal(false);
@@ -33,86 +35,97 @@ export default function Projects() {
       fetchProjects();
     } catch (error) {
       console.error('Error creating project:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="font-mono text-[10px] uppercase tracking-micro text-slate">Loading…</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-600 mt-1">Manage your team projects</p>
+    <>
+      {/* topline */}
+      <div className="flex items-center justify-between pb-6 border-b border-fog mb-10">
+        <div className="font-mono text-[11px] uppercase tracking-micro text-slate">
+          Workspace <span className="text-fog mx-2">/</span>{' '}
+          <span className="text-ink">Projects</span>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn btn-primary flex items-center"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Project
+        <button onClick={() => setShowModal(true)} className="eq-btn-primary text-sm">
+          + New project
         </button>
       </div>
 
+      {/* header */}
+      <div className="mb-12">
+        <div className="font-mono text-[11px] uppercase tracking-micro text-slate mb-4">
+          — All projects · {projects.length} total
+        </div>
+        <h1 className="display mb-2">
+          Projects<em className="serif-italic text-orchid">.</em>
+        </h1>
+        <p className="text-base text-slate max-w-[560px] leading-relaxed">
+          Every workspace you're a member of. Click into one to manage tasks, kanban, and team.
+        </p>
+      </div>
+
       {projects.length === 0 ? (
-        <div className="card text-center py-12">
-          <FolderKanban className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-          <p className="text-gray-600 mb-4">Get started by creating your first project</p>
-          <button onClick={() => setShowModal(true)} className="btn btn-primary">
-            Create Project
+        <div className="border border-fog rounded-xl text-center py-20 px-6 bg-cream">
+          <div className="serif-italic text-[28px] text-ink mb-2">No projects yet</div>
+          <p className="text-slate mb-6">Get started by creating your first project.</p>
+          <button onClick={() => setShowModal(true)} className="eq-btn-primary">
+            Create project
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {projects.map((project, i) => {
             const totalTasks = project.tasks?.length || 0;
-            const completedTasks = project.tasks?.filter(t => t.status === 'COMPLETED').length || 0;
+            const completedTasks =
+              project.tasks?.filter((t) => t.status === 'COMPLETED').length || 0;
             const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            const memberCount = (project.teamMembers?.length || 0) + 1;
 
             return (
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className="card hover:shadow-md transition-shadow duration-200"
+                className="border border-fog rounded-[12px] p-6 flex flex-col gap-4 bg-cream hover:border-ink hover:-translate-y-px transition-all"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{project.name}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">{project.description}</p>
-                  </div>
-                  <FolderKanban className="w-5 h-5 text-primary-600 flex-shrink-0 ml-2" />
+                <div className="flex items-baseline justify-between">
+                  <h3 className="serif-italic text-[24px] text-ink leading-tight">
+                    {project.name}
+                  </h3>
+                  <span className="font-mono text-[10px] uppercase tracking-micro text-slate-soft">
+                    PRJ-{String(i + 1).padStart(2, '0')}
+                  </span>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center text-gray-600">
-                      <Users className="w-4 h-4 mr-1" />
-                      {project.teamMembers?.length || 0} members
-                    </span>
-                    <span className="flex items-center text-gray-600">
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      {completedTasks}/{totalTasks} tasks
-                    </span>
-                  </div>
+                {project.description && (
+                  <p className="text-sm text-slate line-clamp-2 leading-relaxed">
+                    {project.description}
+                  </p>
+                )}
 
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
-                      <span>Progress</span>
-                      <span>{Math.round(progress)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
+                <div className="mt-auto flex flex-col gap-2">
+                  <div className="h-px bg-fog relative overflow-hidden rounded-full">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-orchid"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] uppercase tracking-micro text-slate">
+                    <span>
+                      {Math.round(progress)}% · {completedTasks}/{totalTasks}
+                    </span>
+                    <span>
+                      {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -123,40 +136,64 @@ export default function Projects() {
 
       {/* Create Project Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">Create New Project</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-cream border border-ink max-w-md w-full"
+            style={{ borderRadius: '12px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-5 border-b border-fog">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Project Name
-                </label>
+                <div className="font-mono text-[10px] uppercase tracking-micro text-slate mb-1">
+                  — New project
+                </div>
+                <div className="serif-italic text-[24px] text-ink">Create project</div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-slate hover:text-ink transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+              <div>
+                <label className="eq-label">Project name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input"
-                  placeholder="My Awesome Project"
+                  className="eq-input"
+                  placeholder="e.g. Acme onboarding"
                   required
+                  autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
+                <label className="eq-label">Description</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="input"
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="eq-input resize-none"
                   rows="3"
-                  placeholder="Project description..."
+                  placeholder="What's this project about?"
                 />
               </div>
 
-              <div className="flex space-x-3">
-                <button type="submit" className="flex-1 btn btn-primary">
-                  Create
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 eq-btn-primary py-2.5"
+                >
+                  {submitting ? 'Creating…' : 'Create project'}
                 </button>
                 <button
                   type="button"
@@ -164,7 +201,7 @@ export default function Projects() {
                     setShowModal(false);
                     setFormData({ name: '', description: '' });
                   }}
-                  className="flex-1 btn btn-secondary"
+                  className="flex-1 eq-btn-secondary py-2.5"
                 >
                   Cancel
                 </button>
@@ -173,6 +210,6 @@ export default function Projects() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

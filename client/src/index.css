@@ -3,65 +3,172 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
+  html, body {
+    background: #FAF9F5;
+    color: #000;
+    font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: #B074CE;
+    color: #fff;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'opsz' 144;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+    letter-spacing: -0.005em;
   }
 }
 
 @layer components {
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+  /* === buttons === */
+  .eq-btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors duration-150;
+    border-radius: 6px;
   }
-  
-  .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  .eq-btn-primary {
+    @apply eq-btn bg-orchid text-cloud hover:bg-orchid-hover disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400;
+  .eq-btn-secondary {
+    @apply eq-btn bg-cream text-ink border border-ink hover:bg-ink hover:text-cream;
   }
-  
-  .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
+  .eq-btn-ghost {
+    @apply eq-btn text-ink hover:bg-fog/30;
   }
-  
-  .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none;
+  .eq-btn-danger {
+    @apply eq-btn bg-revops-red text-cloud hover:opacity-90;
   }
-  
-  .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+
+  /* === inputs === */
+  .eq-input {
+    @apply w-full px-3 py-2 bg-cloud border border-fog text-ink text-sm outline-none transition-colors duration-150;
+    border-radius: 6px;
   }
-  
-  .badge {
-    @apply px-2 py-1 text-xs font-semibold rounded-full;
+  .eq-input:focus {
+    @apply border-ink;
   }
-  
-  .badge-todo {
-    @apply bg-gray-100 text-gray-800;
+  .eq-input::placeholder {
+    @apply text-slate-soft;
   }
-  
-  .badge-in-progress {
-    @apply bg-blue-100 text-blue-800;
+
+  .eq-label {
+    @apply block text-xs font-mono uppercase tracking-micro text-slate mb-2;
   }
-  
-  .badge-completed {
-    @apply bg-green-100 text-green-800;
+
+  /* === cards / panels === */
+  .eq-card {
+    @apply bg-cream border border-fog;
+    border-radius: 10px;
   }
-  
-  .badge-overdue {
-    @apply bg-red-100 text-red-800;
+  .eq-card-pad {
+    @apply eq-card p-6;
   }
-  
-  .badge-low {
-    @apply bg-gray-100 text-gray-600;
+
+  /* === thin rule === */
+  .eq-rule {
+    @apply border-0 border-t border-ink;
   }
-  
-  .badge-medium {
-    @apply bg-yellow-100 text-yellow-800;
+  .eq-rule-soft {
+    @apply border-0 border-t border-fog;
   }
-  
-  .badge-high {
-    @apply bg-red-100 text-red-800;
+
+  /* === micro / mono labels === */
+  .eq-mono {
+    @apply font-mono text-[10px] uppercase tracking-micro text-slate;
   }
+  .eq-mono-sm {
+    @apply font-mono text-[11px] uppercase tracking-micro text-slate;
+  }
+
+  /* === pills === */
+  .eq-pill {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[9px] uppercase tracking-micro;
+  }
+  .eq-pill-todo { @apply eq-pill bg-fog/40 text-ink; }
+  .eq-pill-progress { @apply eq-pill bg-orchid-tint text-orchid; }
+  .eq-pill-done { @apply eq-pill bg-brand-green-tint text-brand-green; }
+  .eq-pill-overdue { @apply eq-pill bg-revops-red-tint text-revops-red; }
+  .eq-pill-low { @apply eq-pill bg-fog/40 text-slate; }
+  .eq-pill-medium { @apply eq-pill bg-glacier-tint text-founders-navy; }
+  .eq-pill-high { @apply eq-pill bg-revops-red-tint text-revops-red; }
+
+  /* === paper grain (subtle) === */
+  .eq-grain::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    z-index: 999;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+  }
+
+  /* === legacy compat (so any stale .card / .input / .btn doesn't blow up) === */
+  .card { @apply eq-card-pad; }
+  .input { @apply eq-input; }
+  .btn { @apply eq-btn; }
+  .btn-primary { @apply eq-btn-primary; }
+  .btn-secondary { @apply eq-btn-secondary; }
+  .btn-danger { @apply eq-btn-danger; }
+  .badge { @apply eq-pill; }
+  .badge-todo { @apply eq-pill-todo; }
+  .badge-in-progress { @apply eq-pill-progress; }
+  .badge-completed { @apply eq-pill-done; }
+  .badge-overdue { @apply eq-pill-overdue; }
+  .badge-low { @apply eq-pill-low; }
+  .badge-medium { @apply eq-pill-medium; }
+  .badge-high { @apply eq-pill-high; }
+}
+
+/* display type utilities */
+.display-xl {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-size: 88px;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  font-variation-settings: 'opsz' 144;
+}
+.display {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variation-settings: 'opsz' 144;
+}
+.heading {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 144;
+}
+.heading-sm {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 96;
+}
+.serif-italic {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 400;
 }

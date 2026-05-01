@@ -1,9 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Plus, Users, Trash2, Edit2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
+
+const STATUS_LABEL = {
+  TODO: 'Todo',
+  IN_PROGRESS: 'In progress',
+  COMPLETED: 'Done',
+};
+
+const PRIORITY_PILL = {
+  LOW: 'eq-pill-low',
+  MEDIUM: 'eq-pill-medium',
+  HIGH: 'eq-pill-high',
+};
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
@@ -21,7 +33,7 @@ export default function ProjectDetail() {
     status: 'TODO',
     priority: 'MEDIUM',
     dueDate: '',
-    assigneeId: ''
+    assigneeId: '',
   });
 
   useEffect(() => {
@@ -52,11 +64,10 @@ export default function ProjectDetail() {
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedUserId) return;
-    
     try {
       await axios.post(`/api/projects/${projectId}/members`, {
         userId: selectedUserId,
-        role: memberRole
+        role: memberRole,
       });
       setShowMemberModal(false);
       setSelectedUserId('');
@@ -69,8 +80,7 @@ export default function ProjectDetail() {
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!confirm('Are you sure you want to remove this team member?')) return;
-    
+    if (!confirm('Remove this team member?')) return;
     try {
       await axios.delete(`/api/projects/${projectId}/members/${memberId}`);
       fetchProject();
@@ -83,10 +93,7 @@ export default function ProjectDetail() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/tasks', {
-        ...taskFormData,
-        projectId
-      });
+      await axios.post('/api/tasks', { ...taskFormData, projectId });
       setShowTaskModal(false);
       setTaskFormData({
         title: '',
@@ -94,7 +101,7 @@ export default function ProjectDetail() {
         status: 'TODO',
         priority: 'MEDIUM',
         dueDate: '',
-        assigneeId: ''
+        assigneeId: '',
       });
       fetchProject();
     } catch (error) {
@@ -112,7 +119,7 @@ export default function ProjectDetail() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (!confirm('Delete this task?')) return;
     try {
       await axios.delete(`/api/tasks/${taskId}`);
       fetchProject();
@@ -123,73 +130,103 @@ export default function ProjectDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="font-mono text-[10px] uppercase tracking-micro text-slate">Loading…</div>
       </div>
     );
   }
 
   if (!project) {
-    return <div className="text-center py-12">Project not found</div>;
+    return (
+      <div className="text-center py-20">
+        <div className="serif-italic text-[28px] text-ink mb-2">Project not found</div>
+        <Link to="/projects" className="text-slate underline hover:text-ink">
+          Back to projects
+        </Link>
+      </div>
+    );
   }
 
   const tasksByStatus = {
-    TODO: project.tasks?.filter(t => t.status === 'TODO') || [],
-    IN_PROGRESS: project.tasks?.filter(t => t.status === 'IN_PROGRESS') || [],
-    COMPLETED: project.tasks?.filter(t => t.status === 'COMPLETED') || []
+    TODO: project.tasks?.filter((t) => t.status === 'TODO') || [],
+    IN_PROGRESS: project.tasks?.filter((t) => t.status === 'IN_PROGRESS') || [],
+    COMPLETED: project.tasks?.filter((t) => t.status === 'COMPLETED') || [],
   };
 
+  const canManage = project.creator.id === user.id || user.role === 'ADMIN';
+  const totalMembers = (project.teamMembers?.length || 0) + 1;
+  const totalTasks = project.tasks?.length || 0;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <Link to="/projects" className="inline-flex items-center text-primary-600 hover:text-primary-700 mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Projects
+    <>
+      {/* topline */}
+      <div className="flex items-center justify-between pb-6 border-b border-fog mb-10">
+        <Link
+          to="/projects"
+          className="font-mono text-[11px] uppercase tracking-micro text-slate hover:text-ink flex items-center gap-2"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Workspace <span className="text-fog mx-1">/</span> Projects{' '}
+          <span className="text-fog mx-1">/</span> <span className="text-ink">{project.name}</span>
         </Link>
-        
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-600 mt-1">{project.description}</p>
-          </div>
-          <button
-            onClick={() => setShowTaskModal(true)}
-            className="btn btn-primary flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </button>
-        </div>
+        <button onClick={() => setShowTaskModal(true)} className="eq-btn-primary text-sm">
+          + New task
+        </button>
       </div>
 
-      {/* Team Members */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center">
-            <Users className="w-5 h-5 mr-2" />
-            Team Members ({(project.teamMembers?.length || 0) + 1})
-          </h2>
-          {(project.creator.id === user.id || user.role === 'ADMIN') && (
+      {/* header */}
+      <div className="mb-12">
+        <div className="font-mono text-[11px] uppercase tracking-micro text-slate mb-4">
+          — Project · {totalTasks} task{totalTasks === 1 ? '' : 's'} · {totalMembers} member
+          {totalMembers === 1 ? '' : 's'}
+        </div>
+        <h1 className="display mb-3">
+          {project.name}
+          <em className="serif-italic text-orchid">.</em>
+        </h1>
+        {project.description && (
+          <p className="text-base text-slate max-w-[680px] leading-relaxed">
+            {project.description}
+          </p>
+        )}
+      </div>
+
+      {/* Team members */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="serif-italic text-[22px] text-ink">Team</div>
+            <div className="font-mono text-[10px] uppercase tracking-micro text-slate-soft mt-1">
+              {totalMembers} {totalMembers === 1 ? 'member' : 'members'}
+            </div>
+          </div>
+          {canManage && (
             <button
               onClick={() => setShowMemberModal(true)}
-              className="btn btn-primary text-sm flex items-center"
+              className="eq-btn-secondary text-sm flex items-center gap-2"
             >
-              <UserPlus className="w-4 h-4 mr-1" />
-              Add Member
+              <UserPlus className="w-3.5 h-3.5" />
+              Add member
             </button>
           )}
         </div>
+
         <div className="flex flex-wrap gap-2">
-          <div className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium flex items-center">
-            {project.creator.name} (Owner)
+          <div className="px-3 py-1 border border-orchid bg-orchid-tint text-orchid rounded-full text-sm flex items-center gap-2">
+            <span className="font-medium">{project.creator.name}</span>
+            <span className="font-mono text-[9px] uppercase tracking-micro">Owner</span>
           </div>
           {project.teamMembers?.map((member) => (
-            <div key={member.id} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm flex items-center gap-2">
+            <div
+              key={member.id}
+              className="px-3 py-1 border border-fog bg-cream text-ink rounded-full text-sm flex items-center gap-2"
+            >
               {member.user.name}
-              {(project.creator.id === user.id || user.role === 'ADMIN') && (
+              {canManage && (
                 <button
                   onClick={() => handleRemoveMember(member.id)}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-slate hover:text-revops-red transition-colors"
+                  title="Remove"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -197,243 +234,259 @@ export default function ProjectDetail() {
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {Object.entries(tasksByStatus).map(([status, tasks]) => (
-          <div key={status} className="card bg-gray-50">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
-              <span>{status.replace('_', ' ')}</span>
-              <span className="text-sm font-normal text-gray-600">({tasks.length})</span>
-            </h3>
-            <div className="space-y-3">
-              {tasks.map((task) => (
-                <div key={task.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{task.title}</h4>
-                    <button
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  {task.description && (
-                    <p className="text-sm text-gray-600 mb-3">{task.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`badge badge-${task.priority.toLowerCase()}`}>
-                      {task.priority}
-                    </span>
-                    {task.dueDate && (
-                      <span className="text-xs text-gray-600">
-                        Due: {format(new Date(task.dueDate), 'MMM dd')}
-                      </span>
-                    )}
-                  </div>
-
-                  {task.assignee && (
-                    <p className="text-xs text-gray-600 mb-3">
-                      Assigned to: {task.assignee.name}
-                    </p>
-                  )}
-
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value)}
-                    className="w-full text-xs border border-gray-300 rounded px-2 py-1"
-                  >
-                    <option value="TODO">To Do</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                </div>
-              ))}
+      {/* Kanban */}
+      <section>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="serif-italic text-[22px] text-ink">Tasks</div>
+            <div className="font-mono text-[10px] uppercase tracking-micro text-slate-soft mt-1">
+              Kanban view
             </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Add Team Member Modal */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {Object.entries(tasksByStatus).map(([status, tasks]) => (
+            <div
+              key={status}
+              className="border border-fog rounded-[12px] bg-cream"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-fog">
+                <span className="serif-italic text-[18px] text-ink">{STATUS_LABEL[status]}</span>
+                <span className="font-mono text-[10px] uppercase tracking-micro text-slate">
+                  {String(tasks.length).padStart(2, '0')}
+                </span>
+              </div>
+
+              <div className="p-3 flex flex-col gap-2 min-h-[120px]">
+                {tasks.length === 0 && (
+                  <div className="text-center py-8 font-mono text-[10px] uppercase tracking-micro text-slate-soft">
+                    Empty
+                  </div>
+                )}
+                {tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="bg-cloud border border-fog rounded-[10px] p-4 flex flex-col gap-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-sm font-medium text-ink leading-snug">{task.title}</h4>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-slate-soft hover:text-revops-red transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {task.description && (
+                      <p className="text-xs text-slate leading-relaxed line-clamp-2">
+                        {task.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={PRIORITY_PILL[task.priority] || 'eq-pill-low'}>
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            task.priority === 'HIGH'
+                              ? 'bg-revops-red'
+                              : task.priority === 'MEDIUM'
+                              ? 'bg-glacier'
+                              : 'bg-slate'
+                          }`}
+                        />
+                        {task.priority}
+                      </span>
+                      {task.dueDate && (
+                        <span className="font-mono text-[10px] uppercase tracking-micro text-slate">
+                          {format(new Date(task.dueDate), 'MMM dd')}
+                        </span>
+                      )}
+                    </div>
+
+                    {task.assignee && (
+                      <div className="font-mono text-[10px] uppercase tracking-micro text-slate-soft">
+                        {task.assignee.name}
+                      </div>
+                    )}
+
+                    <select
+                      value={task.status}
+                      onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value)}
+                      className="text-xs border border-fog rounded px-2 py-1.5 bg-cream text-ink outline-none focus:border-ink"
+                    >
+                      <option value="TODO">Todo</option>
+                      <option value="IN_PROGRESS">In progress</option>
+                      <option value="COMPLETED">Done</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Add member modal */}
       {showMemberModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">Add Team Member</h2>
-            
-            {allUsers.filter(u => 
-              u.id !== project.creator.id && 
-              !project.teamMembers?.some(m => m.user.id === u.id)
-            ).length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">No users available to add</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  All registered users are already members of this project.
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  To add more members, create additional user accounts first.
-                </p>
+        <Modal title="Add team member" onClose={() => setShowMemberModal(false)}>
+          {allUsers.filter(
+            (u) =>
+              u.id !== project.creator.id &&
+              !project.teamMembers?.some((m) => m.user.id === u.id)
+          ).length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-slate mb-2">No users available to add.</p>
+              <p className="text-sm text-slate-soft mb-6">
+                All registered users are already members. Create more accounts first.
+              </p>
+              <button
+                onClick={() => setShowMemberModal(false)}
+                className="eq-btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleAddMember} className="flex flex-col gap-5">
+              <div>
+                <label className="eq-label">Select user</label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="eq-input"
+                  required
+                >
+                  <option value="">Choose a user…</option>
+                  {allUsers
+                    .filter(
+                      (u) =>
+                        u.id !== project.creator.id &&
+                        !project.teamMembers?.some((m) => m.user.id === u.id)
+                    )
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="eq-label">Role</label>
+                <select
+                  value={memberRole}
+                  onChange={(e) => setMemberRole(e.target.value)}
+                  className="eq-input"
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 eq-btn-primary py-2.5">
+                  Add member
+                </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowMemberModal(false);
                     setSelectedUserId('');
                     setMemberRole('MEMBER');
                   }}
-                  className="btn btn-secondary"
+                  className="flex-1 eq-btn-secondary py-2.5"
                 >
-                  Close
+                  Cancel
                 </button>
               </div>
-            ) : (
-              <form onSubmit={handleAddMember} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select User
-                  </label>
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="input"
-                    required
-                  >
-                    <option value="">Choose a user...</option>
-                    {allUsers
-                      .filter(u => 
-                        u.id !== project.creator.id && 
-                        !project.teamMembers?.some(m => m.user.id === u.id)
-                      )
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.email})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role
-                  </label>
-                  <select
-                    value={memberRole}
-                    onChange={(e) => setMemberRole(e.target.value)}
-                    className="input"
-                  >
-                    <option value="MEMBER">Member</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                </div>
-
-                <div className="flex space-x-3">
-                  <button type="submit" className="flex-1 btn btn-primary">
-                    Add Member
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMemberModal(false);
-                      setSelectedUserId('');
-                      setMemberRole('MEMBER');
-                    }}
-                    className="flex-1 btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+            </form>
+          )}
+        </Modal>
       )}
 
-      {/* Create Task Modal */}
+      {/* Create task modal */}
       {showTaskModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Create New Task</h2>
-            <form onSubmit={handleCreateTask} className="space-y-4">
+        <Modal title="Create task" onClose={() => setShowTaskModal(false)}>
+          <form onSubmit={handleCreateTask} className="flex flex-col gap-5">
+            <div>
+              <label className="eq-label">Title</label>
+              <input
+                type="text"
+                value={taskFormData.title}
+                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                className="eq-input"
+                placeholder="e.g. Wire up Stripe webhook"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="eq-label">Description</label>
+              <textarea
+                value={taskFormData.description}
+                onChange={(e) =>
+                  setTaskFormData({ ...taskFormData, description: e.target.value })
+                }
+                className="eq-input resize-none"
+                rows="3"
+                placeholder="Notes, context, links…"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Task Title
-                </label>
-                <input
-                  type="text"
-                  value={taskFormData.title}
-                  onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
-                  className="input"
-                  placeholder="Task title"
-                  required
-                />
+                <label className="eq-label">Status</label>
+                <select
+                  value={taskFormData.status}
+                  onChange={(e) => setTaskFormData({ ...taskFormData, status: e.target.value })}
+                  className="eq-input"
+                >
+                  <option value="TODO">Todo</option>
+                  <option value="IN_PROGRESS">In progress</option>
+                  <option value="COMPLETED">Done</option>
+                </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={taskFormData.description}
-                  onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                  className="input"
-                  rows="3"
-                  placeholder="Task description..."
-                />
+                <label className="eq-label">Priority</label>
+                <select
+                  value={taskFormData.priority}
+                  onChange={(e) =>
+                    setTaskFormData({ ...taskFormData, priority: e.target.value })
+                  }
+                  className="eq-input"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={taskFormData.status}
-                    onChange={(e) => setTaskFormData({ ...taskFormData, status: e.target.value })}
-                    className="input"
-                  >
-                    <option value="TODO">To Do</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={taskFormData.priority}
-                    onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value })}
-                    className="input"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                  </select>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Due Date
-                </label>
+                <label className="eq-label">Due date</label>
                 <input
                   type="date"
                   value={taskFormData.dueDate}
-                  onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
-                  className="input"
+                  onChange={(e) =>
+                    setTaskFormData({ ...taskFormData, dueDate: e.target.value })
+                  }
+                  className="eq-input"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assign To
-                </label>
+                <label className="eq-label">Assign to</label>
                 <select
                   value={taskFormData.assigneeId}
-                  onChange={(e) => setTaskFormData({ ...taskFormData, assigneeId: e.target.value })}
-                  className="input"
+                  onChange={(e) =>
+                    setTaskFormData({ ...taskFormData, assigneeId: e.target.value })
+                  }
+                  className="eq-input"
                 >
                   <option value="">Unassigned</option>
                   <option value={project.creator.id}>{project.creator.name}</option>
@@ -444,33 +497,65 @@ export default function ProjectDetail() {
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div className="flex space-x-3">
-                <button type="submit" className="flex-1 btn btn-primary">
-                  Create Task
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTaskModal(false);
-                    setTaskFormData({
-                      title: '',
-                      description: '',
-                      status: 'TODO',
-                      priority: 'MEDIUM',
-                      dueDate: '',
-                      assigneeId: ''
-                    });
-                  }}
-                  className="flex-1 btn btn-secondary"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="flex-1 eq-btn-primary py-2.5">
+                Create task
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTaskModal(false);
+                  setTaskFormData({
+                    title: '',
+                    description: '',
+                    status: 'TODO',
+                    priority: 'MEDIUM',
+                    dueDate: '',
+                    assigneeId: '',
+                  });
+                }}
+                className="flex-1 eq-btn-secondary py-2.5"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
+    </>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-ink/40 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-cream border border-ink max-w-md w-full max-h-[90vh] overflow-y-auto"
+        style={{ borderRadius: '12px' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b border-fog sticky top-0 bg-cream">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-micro text-slate mb-1">
+              — Action
+            </div>
+            <div className="serif-italic text-[24px] text-ink">{title}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate hover:text-ink transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-6">{children}</div>
+      </div>
     </div>
   );
 }
